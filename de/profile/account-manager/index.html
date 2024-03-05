@@ -4,7 +4,6 @@
   rel="stylesheet"
   href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
 />
-  <script src="https://unpkg.com/alpinejs" defer></script>
 <style type="text/css">
 	main{
 		width:95%;
@@ -22,10 +21,11 @@
       top: 0;
       background-color: #FFF;
       z-index: 999;
+      font-size: 0.7em;
     }
     h5{
       position: sticky;
-      top: 1em;
+      top: 0.7em;
       padding-top:0.5em;
       background-color: #FFF;
     }
@@ -47,10 +47,12 @@
       opacity: 0.6;
     }
 
-    .competence{
-      padding-top: 20vh;
 
+    .bluredPreview {
+      filter: blur(3px);
+      -webkit-filter: blur(3px);
     }
+
 </style>
 </head>
 <body x-data="{ profile: window.profileData } ">
@@ -92,44 +94,51 @@
       <canvas></canvas>
     </div>
 
-<div x-text="level.Description"></div>
+    <template x-if="level.Description != ''">
+      <div x-text="level.Description"></div>
+    </template>
 
-  <div style="margin-top:14px;">
-    <h5>Hauptaufgaben <small>eines <span x-text="level.Title"></span> <span x-text="profile.RoleTitle"></span></small></h5>
-    <ol>
-      <template x-for="aufgabe in level.Hauptaufgaben">
-        <li x-text="aufgabe"></li>
-      </template>
-    </ol>
-  </div>
+    <template x-if="level.Hauptaufgaben.length > 0">
+      <div style="margin-top:14px;">
+        <h5>Hauptaufgaben <small>eines <span x-text="level.Title"></span> <span x-text="profile.RoleTitle"></span></small></h5>
+        <ol>
+          <template x-for="aufgabe in level.Hauptaufgaben">
+            <li x-text="aufgabe"></li>
+          </template>
+        </ol>
+      </div>
+    </template>
 
 
+  <div id="competences">
     <template x-for="komp in level.Kompetenzen">
 
       <div style="margin-top:14px;" class="competence">
-        <h5><span x-text="komp.Title"></span> <small>eines <span x-text="level.Title"></span> <span x-text="profile.RoleTitle"></span></small></h5>
-        <div x-data="{ chart: null }" x-init="
-          chart = new Chart($el.querySelector('canvas').getContext('2d'), {
-            type: 'radar',
-            data: {
-              labels: komp.Data.map(k => k.Kompetenz),
-              datasets: [{
-                label: komp.Title+' ('+level.Title+' '+profile.RoleTitle+')',
-                data: komp.Data.map(k => k.Score),
-                fill: true,
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgb(255, 99, 132)',
-                pointBackgroundColor: 'rgb(255, 99, 132)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgb(255, 99, 132)',
-              }]
-            },
-            options: window.defaultRadarOptions
-          });
-        ">
-          <canvas></canvas>
-        </div>
+        <h5><span x-text="komp.Title"></span> <small>eines <span x-text="level.Title"></span></small></h5>
+        <template x-if="komp.Data.length >= 3">
+          <div x-data="{ chart: null }" x-init="
+            chart = new Chart($el.querySelector('canvas').getContext('2d'), {
+              type: 'radar',
+              data: {
+                labels: komp.Data.map(k => k.Kompetenz),
+                datasets: [{
+                  label: komp.Title+' ('+level.Title+' '+profile.RoleTitle+')',
+                  data: komp.Data.map(k => k.Score),
+                  fill: true,
+                  backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                  borderColor: 'rgb(255, 99, 132)',
+                  pointBackgroundColor: 'rgb(255, 99, 132)',
+                  pointBorderColor: '#fff',
+                  pointHoverBackgroundColor: '#fff',
+                  pointHoverBorderColor: 'rgb(255, 99, 132)',
+                }]
+              },
+              options: window.defaultRadarOptions
+            });
+          ">
+            <canvas></canvas>
+          </div>
+        </template>
 
         <table>
         <thead>
@@ -145,7 +154,7 @@
             <tr>
               <td x-text="kompetenz.Kompetenz"></td>
               <td x-text="kompetenz.ScoreVisual"></td>
-              <td x-text="kompetenz.Description"></td>
+              <td x-text="kompetenz.Description" :class="kompetenz.Description.startsWith('bluredPreview') ? 'bluredPreview' : ''"></td>
             </tr>
 
             <li x-text="aufgabe"></li>
@@ -156,12 +165,11 @@
 
     </template>
   </div>
+  </div>
   </template>
 
 </main>
 
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
           fetch('./profile.json')
@@ -170,28 +178,34 @@
                     window.profileData = json
 
 
-
   window.profileData.Levels.forEach((level,k) => {
 
 
     level.Kompetenzen.forEach((kompetenzOverview) => {
       var totalScore = 0;
         kompetenzOverview.Data.forEach((kompetenz) => {
+          kompetenz.Score = Number(kompetenz.Score)
             totalScore += kompetenz.Score;
       switch (kompetenz.Score) {
-        case 0:
-          kompetenz.ScoreVisual = "●○○";
-          break;
         case 1:
-          kompetenz.ScoreVisual = "●●○";
+          kompetenz.ScoreVisual = "●○○○";
           break;
         case 2:
-          kompetenz.ScoreVisual = "●●●";
+          kompetenz.ScoreVisual = "●●○○";
+          break;
+        case 3:
+          kompetenz.ScoreVisual = "●●●○";
+          break;
+        case 4:
+          kompetenz.ScoreVisual = "●●●●";
           break;
       }
     })
 
       let averageScore = Math.round(totalScore / kompetenzOverview.Data.length);
+        if (window.profileData.Levels[k].Overview === undefined){
+          window.profileData.Levels[k].Overview = [];
+        }
       window.profileData.Levels[k].Overview.push({
         Title: kompetenzOverview.Title,
         Score: averageScore
@@ -228,11 +242,22 @@
           color:'rgba(0, 0, 0, 0.03)'
         },
         suggestedMin: 0,
-        suggestedMax: 3
+        suggestedMax: 4
       }
     }
   };
+                    window.profileData.ActiveLevel = window.profileData.Levels[0].Title;
 
+
+
+
+                    var chartjs = document.createElement('script');
+                    chartjs.setAttribute('src','https://cdn.jsdelivr.net/npm/chart.js');
+                    document.body.appendChild(chartjs);
+
+                    var alpineJS = document.createElement('script');
+                    alpineJS.setAttribute('src','https://unpkg.com/alpinejs');
+                    document.body.appendChild(alpineJS);
 
                   })
 /*
