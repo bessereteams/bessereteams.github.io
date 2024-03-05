@@ -1,0 +1,396 @@
+<html data-theme="light">
+<head>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+/>
+  <script src="https://unpkg.com/alpinejs" defer></script>
+<style type="text/css">
+	main{
+		width:95%;
+		max-width: 700px;
+		margin: auto;
+      position: relative;
+	}
+  
+  #overviewChart{
+    height:200px;
+  }
+
+    #levels{
+      position: sticky;
+      top: 0;
+      background-color: #FFF;
+      z-index: 999;
+    }
+    h5{
+      position: sticky;
+      top: 1em;
+      padding-top:0.5em;
+      background-color: #FFF;
+    }
+
+  #levels > div{
+        display: inline-block;
+        padding-right: 10px;
+        cursor: pointer;
+        opacity: 0.6;
+    }
+
+    #levels .active{
+      font-weight:bold;
+      opacity: 1;
+
+    }
+
+    h5 small{
+      opacity: 0.6;
+    }
+
+    .competence{
+      padding-top: 20vh;
+
+    }
+</style>
+</head>
+<body x-data="{ profile: window.profileData } ">
+<main>
+  <h1><span x-text="profile.RoleTitle"></span> Kompetenzprofil</h1>
+  <h4>Dieses Kompetenzprofil zeigt Ihnen worauf sie bei der Einstellung und Beförderung von <span x-text="profile.RoleTitle"></span>s in Ihrer Firma achten müssen.</h4>
+
+  <div id="levels">
+    <template x-for="level in profile.Levels">
+      <div x-text="level.Title" :class="profile.ActiveLevel == level.Title ? 'active' : ''" x-on:click="profile.ActiveLevel = level.Title"></div>
+    </template>
+  </div>
+
+  <template x-for="level in profile.Levels">
+
+  <div x-show="profile.ActiveLevel == level.Title">
+
+
+    <div x-data="{ chart: null }" x-init="
+          chart = new Chart($el.querySelector('canvas').getContext('2d'), {
+            type: 'radar',
+            data: {
+              labels: level.Overview.map(o => o.Title),
+              datasets: [{
+                label: '('+level.Title+' '+profile.RoleTitle+')',
+                data: level.Overview.map(o => o.Score),
+                fill: true,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgb(255, 99, 132)',
+                pointBackgroundColor: 'rgb(255, 99, 132)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(255, 99, 132)',
+              }]
+            },
+            options: window.defaultRadarOptions
+          });
+        ">
+      <canvas></canvas>
+    </div>
+
+<div x-text="level.Description"></div>
+
+  <div style="margin-top:14px;">
+    <h5>Hauptaufgaben <small>eines <span x-text="level.Title"></span> <span x-text="profile.RoleTitle"></span></small></h5>
+    <ol>
+      <template x-for="aufgabe in level.Hauptaufgaben">
+        <li x-text="aufgabe"></li>
+      </template>
+    </ol>
+  </div>
+
+
+    <template x-for="komp in level.Kompetenzen">
+
+      <div style="margin-top:14px;" class="competence">
+        <h5><span x-text="komp.Title"></span> <small>eines <span x-text="level.Title"></span> <span x-text="profile.RoleTitle"></span></small></h5>
+        <div x-data="{ chart: null }" x-init="
+          chart = new Chart($el.querySelector('canvas').getContext('2d'), {
+            type: 'radar',
+            data: {
+              labels: komp.Data.map(k => k.Kompetenz),
+              datasets: [{
+                label: komp.Title+' ('+level.Title+' '+profile.RoleTitle+')',
+                data: komp.Data.map(k => k.Score),
+                fill: true,
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgb(255, 99, 132)',
+                pointBackgroundColor: 'rgb(255, 99, 132)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(255, 99, 132)',
+              }]
+            },
+            options: window.defaultRadarOptions
+          });
+        ">
+          <canvas></canvas>
+        </div>
+
+        <table>
+        <thead>
+        <tr>
+          <th>Kompetenz</th>
+          <th>Score</th>
+          <th>Description</th>
+        </tr>
+        </thead>
+        <tbody>
+          <template x-for="kompetenz in komp.Data">
+
+            <tr>
+              <td x-text="kompetenz.Kompetenz"></td>
+              <td x-text="kompetenz.ScoreVisual"></td>
+              <td x-text="kompetenz.Description"></td>
+            </tr>
+
+            <li x-text="aufgabe"></li>
+          </template>
+        </tbody>
+        </table>
+      </div>
+
+    </template>
+  </div>
+  </template>
+
+</main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+          fetch('./profile.json')
+                  .then((response) => response.json())
+                  .then((json) => window.profileData = json)
+
+
+
+  window.profileData.Levels.forEach((level,k) => {
+
+
+    level.Kompetenzen.forEach((kompetenzOverview) => {
+      var totalScore = 0;
+        kompetenzOverview.Data.forEach((kompetenz) => {
+            totalScore += kompetenz.Score;
+      switch (kompetenz.Score) {
+        case 0:
+          kompetenz.ScoreVisual = "●○○";
+          break;
+        case 1:
+          kompetenz.ScoreVisual = "●●○";
+          break;
+        case 2:
+          kompetenz.ScoreVisual = "●●●";
+          break;
+      }
+    })
+
+      let averageScore = Math.round(totalScore / kompetenzOverview.Data.length);
+      window.profileData.Levels[k].Overview.push({
+        Title: kompetenzOverview.Title,
+        Score: averageScore
+      })
+    })
+  })
+
+
+  window.defaultRadarOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 3/2,
+    elements: {
+      line: {
+        borderWidth: 3
+      }
+    },
+    plugins: {
+      legend: {
+        display: false,
+      }
+    },
+    scales: {
+      r: {
+        angleLines: {
+          display: true,
+          color:'rgba(0, 0, 0, 0.03  )'
+
+        },
+        ticks: {
+          stepSize: 1,
+        },
+        grid: {
+          color:'rgba(0, 0, 0, 0.03)'
+        },
+        suggestedMin: 0,
+        suggestedMax: 3
+      }
+    }
+  };
+
+
+/*
+
+
+  const config = {
+    type: 'radar',
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 3/2,
+      elements: {
+        line: {
+          borderWidth: 3
+        }
+      },
+      plugins: {
+        legend: {
+          display: false,
+        }
+      },
+      scales: {
+        r: {
+          angleLines: {
+            display: true,
+            color:'rgba(0, 0, 0, 0.03  )'
+
+          },
+          ticks: {
+            stepSize: 1,
+          },
+          grid: {
+            color:'rgba(0, 0, 0, 0.03)'
+          },
+          suggestedMin: 0,
+          suggestedMax: 3
+        }
+      }
+    },
+  };
+
+
+
+const overviewData = {
+  labels: [
+    'Eating',
+    'Drinking',
+    'Sleeping',
+    'Designing',
+    'Coding',
+    'Cycling',
+    'Coding',
+    'Cycling',
+    'Coding',
+    'Cycling',
+    'Coding',
+    'Cycling',
+    'Running'
+  ],
+  datasets: [{
+    label: 'Junior',
+    data: [0, 1, 2, 3,2,1,2,0,0,0,0,0,0],
+    fill: true,
+    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+    borderColor: 'rgb(255, 99, 132)',
+    pointBackgroundColor: 'rgb(255, 99, 132)',
+    pointBorderColor: '#fff',
+    pointHoverBackgroundColor: '#fff',
+    pointHoverBorderColor: 'rgb(255, 99, 132)',
+  }, {
+    label: 'Midlevel',
+    data: [1,3, 0, 0,1,1,2,0,0,0,0,0,0],
+    fill: true,
+    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+    borderColor: 'rgb(54, 162, 235)',
+    pointBackgroundColor: 'rgb(54, 162, 235)',
+    pointBorderColor: '#fff',
+    pointHoverBackgroundColor: '#fff',
+    pointHoverBorderColor: 'rgb(54, 162, 235)',
+  },
+   {
+    label: 'Senior',
+    data: [1,3,2,0,0,0,0,0,0, 0, 0,1,1],
+    fill: true,
+    backgroundColor: 'rgba(24, 10, 235, 0.2)',
+    borderColor: 'rgb(24, 10, 235)',
+    pointBackgroundColor: 'rgb(24, 10, 235)',
+    pointBorderColor: '#fff',
+    pointHoverBackgroundColor: '#fff',
+    pointHoverBorderColor: 'rgb(24, 10, 235)',
+  }]
+};
+
+
+
+
+
+
+  const fachData = {
+    labels: [
+      'Eating',
+      'Drinking',
+      'Sleeping',
+      'Running'
+    ],
+    datasets: [{
+      label: 'Junior',
+      data: [2, 1, 2, 3],
+      fill: true,
+      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+      borderColor: 'rgb(255, 99, 132)',
+      pointBackgroundColor: 'rgb(255, 99, 132)',
+      pointBorderColor: '#fff',
+      pointHoverBackgroundColor: '#fff',
+      pointHoverBorderColor: 'rgb(255, 99, 132)',
+    }]
+  };
+  config.data = fachData;
+  const fachChart = new Chart( document.getElementById('fachkompetenzChart'), config);
+
+  config.data = overviewData;
+  const overviewChart = new Chart( document.getElementById('overviewChart'), config);
+
+
+
+
+
+  const numberOfVisibleDatasets = overviewData.datasets.length;
+
+
+
+  const showLevel = function(v){
+    v = v % numberOfVisibleDatasets;
+
+    for (let i = 0; i < numberOfVisibleDatasets; i++) {
+      overviewChart.setDatasetVisibility(i, false);
+    }
+    overviewChart.setDatasetVisibility(v, true);
+    overviewChart.update("resize");
+
+    const singleLevels = document.querySelectorAll(".singleLevel");
+    singleLevels.forEach((s, i) => {
+      if(i === v){
+        s.classList.add("active")
+      }else{
+        s.classList.remove("active")
+      }
+    })
+  }
+
+
+  let v = 0;
+  var intervalId = window.setInterval(function (){
+    v++;
+    showLevel(v);
+  }, 5000);
+
+
+ */
+</script>
+
+</body>
+</html>
