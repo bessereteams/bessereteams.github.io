@@ -166,7 +166,8 @@
 <script>
           fetch('./profile.json')
                   .then((response) => response.json())
-                  .then((json) => window.profileData = json)
+                  .then((json) => {
+                    window.profileData = json
 
 
 
@@ -233,6 +234,7 @@
   };
 
 
+                  })
 /*
 
 
